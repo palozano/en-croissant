@@ -16,11 +16,11 @@ import {
 import { useForm } from "@mantine/form";
 import { IconAlertCircle, IconDatabase, IconTrophy } from "@tabler/icons-react";
 import { join, resolve } from "@tauri-apps/api/path";
-import { useAtom } from "jotai";
+import { useAtom, useSetAtom } from "jotai";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { commands } from "@/bindings";
-import { enginesAtom } from "@/state/atoms";
+import { enginesAtom, registerInstalledEngineAtom } from "@/state/atoms";
 import { getEnginesDir } from "@/utils/directories";
 import {
   type LocalEngine,
@@ -204,7 +204,7 @@ function EngineCard({
 
   const [inProgress, setInProgress] = useState<boolean>(false);
   const [progressButtonKey, setProgressButtonKey] = useState(0);
-  const [, setEngines] = useAtom(enginesAtom);
+  const registerEngine = useSetAtom(registerInstalledEngineAtom);
   const downloadEngine = useCallback(
     async (id: number, url: string) => {
       setInProgress(true);
@@ -214,7 +214,8 @@ function EngineCard({
         if (/\.(?:zip|tar|tar\.gz)(?:[?#]|$)/.test(url)) {
           path = enginesDir;
         }
-        unwrap(await commands.downloadFile(`engine_${id}`, url, path, null, false, null));
+        const result = await commands.downloadFile(`engine_${id}`, url, path, null, false, null);
+        if (result.status === "error") throw new Error(result.error);
         let enginesDirPath = enginesDir;
         if (enginesDirPath.endsWith("/") || enginesDirPath.endsWith("\\")) {
           enginesDirPath = enginesDirPath.slice(0, -1);
@@ -222,23 +223,20 @@ function EngineCard({
         const enginePath = await join(enginesDirPath, ...engine.path.split("/"));
         unwrap(await commands.setFileAsExecutable(enginePath));
         const config = unwrap(await commands.getEngineConfig(enginePath));
-        setEngines(async (prev) => [
-          ...(await prev),
-          {
-            ...engine,
-            id: crypto.randomUUID(),
-            type: "local",
-            path: enginePath,
-            loaded: true,
-            settings: config.options
-              .filter((o) => requiredEngineSettings.includes(o.value.name))
-              .map((o) => ({
-                name: o.value.name,
-                // @ts-expect-error
-                value: o.value.default,
-              })),
-          },
-        ]);
+        await registerEngine({
+          ...engine,
+          id: crypto.randomUUID(),
+          type: "local",
+          path: enginePath,
+          loaded: true,
+          settings: config.options
+            .filter((o) => requiredEngineSettings.includes(o.value.name))
+            .map((o) => ({
+              name: o.value.name,
+              // @ts-expect-error
+              value: o.value.default,
+            })),
+        });
       } finally {
         try {
           await commands.clearProgress(`engine_${id}`);
@@ -249,7 +247,7 @@ function EngineCard({
         }
       }
     },
-    [engine, setEngines],
+    [engine, registerEngine],
   );
 
   return (
@@ -276,6 +274,7 @@ function EngineCard({
             <Text size="xs">{formatBytes(engine.downloadSize ?? 0)}</Text>
           </Group>
           <ProgressButton
+            cancellableDownload
             key={progressButtonKey}
             id={`engine_${engineId}`}
             initInstalled={initInstalled}
@@ -287,7 +286,7 @@ function EngineCard({
             }}
             onClick={() => {
               if (!engine.downloadLink) return;
-              downloadEngine(engineId, engine.downloadLink);
+              return downloadEngine(engineId, engine.downloadLink);
             }}
             inProgress={inProgress}
             setInProgress={setInProgress}

@@ -6,6 +6,7 @@ import { memo, useContext, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { createStore, useStore } from "zustand";
 import type { Outcome } from "@/bindings";
+import { gameResultPresentation } from "@/utils/gameResult";
 import type { GameHeaders } from "@/utils/treeReducer";
 import FideInfo from "../databases/FideInfo";
 import classes from "./GameInfo.module.css";
@@ -21,9 +22,13 @@ function GameInfo({
   headers,
   simplified,
   changeTitle,
+  humanColor,
+  resultReadOnly = false,
 }: {
   headers: GameHeaders;
   simplified?: boolean;
+  humanColor?: "white" | "black" | null;
+  resultReadOnly?: boolean;
   changeTitle?: (title: string) => void;
 }) {
   const { t } = useTranslation();
@@ -31,6 +36,7 @@ function GameInfo({
   const disabled = store === EMPTY_STORE;
   const setHeaders = useStore(store, (s) => s.setHeaders);
   const [player, setPlayer] = useState<"white" | "black" | null>(null);
+  const result = gameResultPresentation(headers.result, humanColor);
   const event = detail(headers.event);
   const site = detail(headers.site);
   const roundValue = detail(headers.round?.trim());
@@ -163,10 +169,10 @@ function GameInfo({
             </div>
           );
         })}
-        <div className={classes.result} data-editable={!disabled || undefined}>
-          {disabled ? (
-            <Text fw={600}>
-              {headers.result === "1/2-1/2" ? "½–½" : headers.result.replace("-", "–")}
+        <div className={classes.result} data-editable={(!disabled && !resultReadOnly) || undefined}>
+          {disabled || resultReadOnly ? (
+            <Text fw={600} c={result.color}>
+              {result.text}
             </Text>
           ) : (
             <Select

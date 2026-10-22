@@ -3,7 +3,6 @@ import customParseFormat from "dayjs/plugin/customParseFormat";
 import i18n from "i18next";
 import { createRoot } from "react-dom/client";
 import { initReactI18next } from "react-i18next";
-import App from "./App";
 
 import be_BY from "./translation/be-BY.json";
 import de_DE from "./translation/de-DE.json";
@@ -60,4 +59,14 @@ setAutoFreeze(false);
 
 const container = document.getElementById("app");
 const root = createRoot(container!);
-root.render(<App />);
+if (new URLSearchParams(window.location.search).has("presentation")) {
+  void import("./web/PresentationBoard").then(({ default: PresentationBoard }) =>
+    root.render(<PresentationBoard />),
+  );
+} else if (new URLSearchParams(window.location.search).has("floating-board")) {
+  void import("./floatingBoard");
+} else if (import.meta.env.MODE === "web" || !("__TAURI_INTERNALS__" in window)) {
+  void import("./web/BrowserApp").then(({ default: BrowserApp }) => root.render(<BrowserApp />));
+} else {
+  void import("./App").then(({ default: App }) => root.render(<App />));
+}

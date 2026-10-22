@@ -1,0 +1,123 @@
+.move-tree {
+  --notation-border: color-mix(in srgb, currentColor 16%, transparent);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  min-width: 0;
+}
+.move-tree-location {
+  position: sticky;
+  top: 0;
+  padding: 7px 8px;
+  font-size: 0.75rem;
+  opacity: 0.8;
+  overflow-wrap: anywhere;
+  background: var(--mantine-color-body, #1a2029);
+  z-index: 1;
+  border-bottom: 1px solid var(--notation-border);
+}
+.move-tree-heading,
+.move-tree-row {
+  display: grid;
+  grid-template-columns: 3.5em minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+}
+.move-tree-heading {
+  font-size: 0.72rem;
+  opacity: 0.65;
+  padding: 5px 0;
+}
+.move-tree-heading > span,
+.move-tree-number {
+  padding: 4px 8px;
+}
+.move-tree-number {
+  opacity: 0.65;
+  font-variant-numeric: tabular-nums;
+}
+.move-tree-row {
+  border-bottom: 1px solid var(--notation-border);
+}
+.move-tree-cell {
+  min-width: 0;
+  border-radius: 4px;
+}
+.move-tree-cell[data-selected] {
+  background: #27866d35;
+  box-shadow: inset 3px 0 #399b80;
+}
+.move-tree .move-tree-cell > button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  font-weight: 600;
+  padding: 7px 10px;
+  width: 100%;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.move-tree button:focus-visible,
+.move-tree summary:focus-visible {
+  outline: 2px solid #399b80;
+  outline-offset: -2px;
+}
+.move-tree .move-tree-cell > button:hover {
+  background: #399b801c;
+}
+.move-tree .move-tree-branch-toggle,
+.move-tree .move-tree-start {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  padding: 7px 8px;
+  cursor: pointer;
+  width: 100%;
+}
+.move-tree .move-tree-start {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+.move-tree .move-tree-start.selected {
+  background: #27866d35;
+}
+.move-tree-branch {
+  margin: 5px 0 8px 8px;
+  border-left: 2px solid var(--notation-border);
+  padding-left: 6px;
+}
+.move-tree-branch[data-active-branch] {
+  border-left-color: #399b80;
+}
+.move-tree .move-tree-branch-toggle {
+  font-size: 0.73rem;
+  opacity: 0.85;
+  overflow-wrap: anywhere;
+}
+.move-tree-comment {
+  margin: 5px 8px 9px 3.5em;
+  padding: 6px 9px;
+  border-left: 2px solid var(--notation-border);
+  font-size: 0.8rem;
+  opacity: 0.85;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.move-tree-comment summary {
+  cursor: pointer;
+}
+.move-tree-comment p {
+  margin: 0;
+}
+.move-tree-empty {
+  opacity: 0.5;
+  padding-left: 8px;
+}
+@media (max-width: 600px) {
+  .move-tree-branch {
+    margin-left: 3px;
+    padding-left: 3px;
+  }
+}

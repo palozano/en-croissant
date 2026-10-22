@@ -53,3 +53,29 @@
 [data-mantine-color-scheme="dark"] .tabsFiller {
   border-bottom: 1px solid var(--mantine-color-dark-4);
 }
+
+.boardLayout {
+  height: 100%;
+  width: 100%;
+  overflow: auto;
+}
+
+.boardLayoutContent {
+  position: relative;
+  height: 100%;
+}
+
+/* Lock only the outer board boundary, leaving nested puzzle splitters active. */
+.boardLayout[data-compact="true"]
+  > .boardLayoutContent
+  > :global(.mosaic)
+  > :global(.mosaic-root)
+  > :global(.mosaic-split:nth-child(2)),
+.boardLayout[data-fixed-puzzle-info="true"]
+  > .boardLayoutContent
+  > :global(.mosaic)
+  > :global(.mosaic-root)
+  > :global(.mosaic-split:nth-child(4)) {
+  pointer-events: none;
+  cursor: default;
+}

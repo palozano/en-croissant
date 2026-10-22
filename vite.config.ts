@@ -10,7 +10,7 @@ const isDebug = !!process.env.TAURI_ENV_DEBUG;
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
     plugins: [
         tanstackRouter({
             target: "react",
@@ -36,6 +36,7 @@ export default defineConfig({
         },
     },
     build: {
+        outDir: mode === "web" ? "dist-web" : "dist",
         minify: isDebug ? false : "esbuild",
         sourcemap: isDebug ? "inline" : false,
         target: process.env.TAURI_ENV_PLATFORM == "windows" ? "chrome105" : "safari13",
@@ -46,9 +47,15 @@ export default defineConfig({
         },
     },
     test: {
+        include: ["src/**/*.test.{ts,tsx}"],
+        // JSDOM owns browser storage; Node 22+ also exposes incompatible globals.
+        execArgv:
+            Number(process.versions.node.split(".")[0]) >= 22
+                ? ["--no-experimental-webstorage"]
+                : [],
         environment: "jsdom",
     },
     define: {
         "import.meta.env.VITE_PLATFORM": JSON.stringify(os.platform()),
     },
-});
+}));

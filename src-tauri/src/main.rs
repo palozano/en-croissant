@@ -8,6 +8,7 @@ mod db;
 mod engine;
 mod error;
 mod game;
+mod game_history;
 
 mod fs;
 mod lexer;
@@ -46,8 +47,9 @@ use crate::db::{
     preload_reference_db, search_position, MmapSearchIndex,
 };
 use crate::game::{
-    abort_game, get_game_engine_logs, get_game_state, make_game_move, resign_game, start_game,
-    take_back_game_move, ClockUpdateEvent, GameMoveEvent, GameOverEvent,
+    abort_game, get_game_engine_logs, get_game_state, list_saved_games, load_saved_game,
+    make_game_move, resign_game, resume_saved_game, start_game, take_back_game_move,
+    ClockUpdateEvent, GameMoveEvent, GameOverEvent,
 };
 
 use crate::fs::set_file_as_executable;
@@ -65,7 +67,7 @@ use crate::{
         delete_duplicated_games, edit_db_info, get_db_info, get_games, get_players, merge_players,
         write_db_game,
     },
-    fs::{download_file, file_exists, get_file_metadata},
+    fs::{cancel_download, download_file, file_exists, get_file_metadata},
     opening::{
         get_opening_from_fen, get_opening_from_fens, get_opening_from_name, search_opening_name,
     },
@@ -93,6 +95,7 @@ pub struct AppState {
     auth: AuthState,
     game_manager: GameManager,
     progress_state: ProgressStore,
+    downloads: DashMap<String, futures_util::future::AbortHandle>,
 }
 
 #[tauri::command]
@@ -116,7 +119,7 @@ pub fn file_from_args(args: &[String], cwd: &str) -> Option<String> {
     } else {
         first
     };
-    if args.next().is_some() || file.to_ascii_lowercase().starts_with("encroissant:") {
+    if args.next().is_some() || file.to_ascii_lowercase().starts_with("schaak:") {
         return None;
     }
     Some(std::path::Path::new(cwd).join(file).to_string_lossy().into_owned())
@@ -165,6 +168,7 @@ fn main() {
             authenticate,
             write_game,
             download_file,
+            cancel_download,
             get_tournaments,
             get_db_info,
             get_games,
@@ -174,6 +178,9 @@ fn main() {
             get_puzzle_themes,
             get_themes_for_puzzle,
             delete_puzzle_database,
+            list_saved_games,
+            load_saved_game,
+            resume_saved_game,
             start_game,
             get_game_state,
             make_game_move,
@@ -210,7 +217,7 @@ fn main() {
     let log_targets = [
         TargetKind::Stdout,
         TargetKind::LogDir {
-            file_name: Some(String::from("en-croissant.log")),
+            file_name: Some(String::from("schaak.log")),
         },
     ];
 

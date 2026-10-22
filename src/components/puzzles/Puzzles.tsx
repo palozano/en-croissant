@@ -3,6 +3,7 @@ import {
   ActionIcon,
   Alert,
   Badge,
+  Box,
   Button,
   Divider,
   Group,
@@ -17,7 +18,6 @@ import {
   Text,
   Tooltip,
 } from "@mantine/core";
-import { useSessionStorage } from "@mantine/hooks";
 import {
   IconAlertTriangle,
   IconFlame,
@@ -32,8 +32,10 @@ import { parseFen } from "chessops/fen";
 import { useAtom, useSetAtom } from "jotai";
 import { useContext, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Mosaic } from "react-mosaic-component";
 import { useStore } from "zustand";
 import { commands, type PuzzleDatabaseInfo } from "@/bindings";
+import { usePuzzleSession } from "@/hooks/usePuzzleSession";
 import {
   activeTabAtom,
   currentPuzzleAtom,
@@ -60,6 +62,8 @@ import MoveControls from "../common/MoveControls";
 import { TreeStateContext } from "../common/TreeStateContext";
 import AddPuzzle from "./AddPuzzle";
 import PuzzleBoard from "./PuzzleBoard";
+import PuzzleBoardLayout from "./PuzzleBoardLayout";
+import PuzzleSessionHistory from "./PuzzleSessionHistory";
 
 function Puzzles({ id }: { id: string }) {
   const { t } = useTranslation();
@@ -70,14 +74,11 @@ function Puzzles({ id }: { id: string }) {
   const makeMove = useStore(store, (s) => s.makeMove);
   const setShapes = useStore(store, (s) => s.setShapes);
   const currentMove = useStore(store, (s) => s.currentNode().move);
-  const [puzzles, setPuzzles] = useSessionStorage<Puzzle[]>({
-    key: `${id}-puzzles`,
-    defaultValue: [],
-  });
   const [currentPuzzle, setCurrentPuzzle] = useAtom(currentPuzzleAtom);
 
   const [puzzleDbs, setPuzzleDbs] = useState<PuzzleDatabaseInfo[]>([]);
   const [selectedDb, setSelectedDb] = useAtom(selectedPuzzleDbAtom);
+  const [puzzles, setPuzzles] = usePuzzleSession(id, selectedDb);
 
   const [settingsOpened, setSettingsOpened] = useState(false);
 
@@ -293,18 +294,28 @@ function Puzzles({ id }: { id: string }) {
   return (
     <>
       <Portal target="#left" style={{ height: "100%" }}>
-        <PuzzleBoard
-          key={currentPuzzle}
-          puzzles={puzzles}
-          currentPuzzle={currentPuzzle}
-          changeCompletion={changeCompletion}
-          generatePuzzle={generatePuzzle}
-          db={selectedDb}
+        <PuzzleBoardLayout
+          board={
+            <PuzzleBoard
+              key={currentPuzzle}
+              puzzles={puzzles}
+              currentPuzzle={currentPuzzle}
+              changeCompletion={changeCompletion}
+              generatePuzzle={generatePuzzle}
+              db={selectedDb}
+            />
+          }
+          notation={
+            <Stack h="100%" gap="xs" style={{ minHeight: 0 }}>
+              <GameNotation />
+              <MoveControls readOnly />
+            </Stack>
+          }
         />
       </Portal>
       <Portal target="#topRight" style={{ height: "100%" }}>
         <Paper
-          h="100%"
+          data-fixed-puzzle-info
           withBorder
           p="md"
           style={{
@@ -351,6 +362,14 @@ function Puzzles({ id }: { id: string }) {
                 if (v === "add") {
                   setAddOpened(true);
                 } else {
+                  if (v !== selectedDb) {
+                    solutionAbortRef.current?.abort();
+                    setPuzzles([]);
+                    setCurrentPuzzle(0);
+                    reset();
+                    setTimerStart(null);
+                    setIsPlayingSolution(false);
+                  }
                   setSelectedDb(v);
                 }
               }}
@@ -528,13 +547,28 @@ function Puzzles({ id }: { id: string }) {
             </Group>
           )}
           <Group justify="space-between">
-            <Text fz="1.75rem" fw={500}>
-              {!turnToMove
-                ? ""
-                : turnToMove === "white"
-                  ? t("Fen.BlackToMove")
-                  : t("Fen.WhiteToMove")}
-            </Text>
+            <Group gap="xs" wrap="nowrap">
+              {turnToMove && (
+                <Box
+                  aria-hidden="true"
+                  w="1.25rem"
+                  h="1.25rem"
+                  style={{
+                    flexShrink: 0,
+                    backgroundColor: turnToMove === "white" ? "#000" : "#fff",
+                    border: "1px solid var(--mantine-color-gray-6)",
+                    borderRadius: "2px",
+                  }}
+                />
+              )}
+              <Text fz="1.75rem" fw={500}>
+                {!turnToMove
+                  ? ""
+                  : turnToMove === "white"
+                    ? t("Fen.BlackToMove")
+                    : t("Fen.WhiteToMove")}
+              </Text>
+            </Group>
             <Group gap="xs">
               <Tooltip label={t("Puzzle.NewPuzzle")}>
                 <ActionIcon
@@ -570,10 +604,13 @@ function Puzzles({ id }: { id: string }) {
                   <IconZoomCheck />
                 </ActionIcon>
               </Tooltip>
-              <Tooltip label={t("Puzzle.ClearSession")}>
+              <Tooltip label={t("Puzzle.NewSession")}>
                 <ActionIcon
+                  aria-label={t("Puzzle.NewSession")}
                   onClick={() => {
+                    solutionAbortRef.current?.abort();
                     setPuzzles([]);
+                    setCurrentPuzzle(0);
                     reset();
                     setTimerStart(null);
                     setIsPlayingSolution(false);
@@ -668,35 +705,71 @@ function Puzzles({ id }: { id: string }) {
         </Paper>
       </Portal>
       <Portal target="#bottomRight" style={{ height: "100%" }}>
-        <Stack h="100%" gap="xs">
-          <Paper withBorder p="md" mih="5rem">
-            <ScrollArea h="100%" offsetScrollbars>
-              <ChallengeHistory
-                challenges={puzzles.map((p) => ({
-                  ...p,
-                  label: p.rating?.toString() ?? "-",
-                }))}
-                current={currentPuzzle}
-                select={(i) => {
-                  if (i === currentPuzzle) return;
-                  solutionAbortRef.current?.abort();
-                  setIsPlayingSolution(false);
-                  setCurrentPuzzle(i);
-                  setPuzzle(puzzles[i]);
-                  if (puzzles[i].completion === "incomplete") {
-                    setTimerStart(Date.now() - (puzzles[i].timeSpent || 0));
-                  } else {
-                    setTimerStart(null);
-                  }
-                }}
-              />
-            </ScrollArea>
-          </Paper>
-          <Stack flex={1} gap="xs">
-            <GameNotation />
-            <MoveControls readOnly />
-          </Stack>
-        </Stack>
+        <div style={{ height: "100%", overflowY: "auto" }}>
+          <div
+            data-resizable-puzzle-panels
+            style={{ height: "100%", minHeight: 360, position: "relative" }}
+          >
+            <Mosaic<"played" | "history">
+              initialValue={{
+                direction: "column",
+                first: "played",
+                second: "history",
+                splitPercentage: 30,
+              }}
+              resize={{ minimumPaneSizePercentage: 15 }}
+              renderTile={(panel) => {
+                switch (panel) {
+                  case "played":
+                    return (
+                      <Paper withBorder p="md" h="100%" style={{ overflow: "hidden" }}>
+                        <ScrollArea h="100%" offsetScrollbars>
+                          <ChallengeHistory
+                            challenges={puzzles.map((p) => ({
+                              ...p,
+                              label: p.rating?.toString() ?? "-",
+                            }))}
+                            current={currentPuzzle}
+                            select={(i) => {
+                              if (i === currentPuzzle) return;
+                              solutionAbortRef.current?.abort();
+                              setIsPlayingSolution(false);
+                              setCurrentPuzzle(i);
+                              setPuzzle(puzzles[i]);
+                              if (puzzles[i].completion === "incomplete") {
+                                setTimerStart(Date.now() - (puzzles[i].timeSpent || 0));
+                              } else {
+                                setTimerStart(null);
+                              }
+                            }}
+                          />
+                        </ScrollArea>
+                      </Paper>
+                    );
+                  case "history":
+                    return (
+                      <PuzzleSessionHistory
+                        onInspect={(puzzle) => {
+                          createTab({
+                            tab: { name: "Puzzle Analysis", type: "analysis" },
+                            setTabs,
+                            setActiveTab,
+                            pgn: puzzle.moves.join(" "),
+                            headers: {
+                              ...defaultTree().headers,
+                              fen: puzzle.fen,
+                              orientation:
+                                parseFen(puzzle.fen).unwrap().turn === "white" ? "black" : "white",
+                            },
+                          });
+                        }}
+                      />
+                    );
+                }
+              }}
+            />
+          </div>
+        </div>
       </Portal>
     </>
   );

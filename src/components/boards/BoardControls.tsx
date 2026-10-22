@@ -1,3 +1,6 @@
+import { openFloatingBoard } from "@/utils/floatingBoard";
+import { notifications } from "@mantine/notifications";
+import { IconPictureInPicture } from "@tabler/icons-react";
 import { ActionIcon, Stack, Tooltip } from "@mantine/core";
 import {
   IconArrowBack,
@@ -108,6 +111,18 @@ function BoardControls({
 
   return (
     <Stack gap={4} align="center">
+      <Tooltip position="right" label={t("Board.Action.FloatingBoard")}>
+        <ActionIcon
+          aria-label={t("Board.Action.FloatingBoard")}
+          onClick={() => {
+            void openFloatingBoard().catch((error: unknown) =>
+              notifications.show({ color: "red", message: String(error) }),
+            );
+          }}
+        >
+          <IconPictureInPicture size="1.2rem" />
+        </ActionIcon>
+      </Tooltip>
       <Tooltip position="right" label={t("Board.Action.TakeSnapshot")}>
         <ActionIcon onClick={() => takeSnapshot()}>
           <IconCamera size="1.2rem" />

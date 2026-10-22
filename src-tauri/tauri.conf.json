@@ -23,7 +23,7 @@
         "bundleMediaFramework": true
       }
     },
-    "publisher": "Francisco Salgueiro",
+    "publisher": "palozano",
     "shortDescription": "Ultimate Chess Toolkit",
     "longDescription": "",
     "macOS": {
@@ -36,8 +36,7 @@
     "resources": {
       "../sound/": "sound/"
     },
-    "targets": "all",
-    "createUpdaterArtifacts": "v1Compatible"
+    "targets": "all"
   },
   "build": {
     "beforeDevCommand": "pnpm start-vite",
@@ -45,14 +44,14 @@
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420"
   },
-  "productName": "en-croissant",
-  "mainBinaryName": "en-croissant",
-  "identifier": "org.encroissant.app",
+  "productName": "schaak",
+  "mainBinaryName": "schaak",
+  "identifier": "io.github.palozano.schaak",
   "plugins": {
     "deep-link": {
       "desktop": {
         "schemes": [
-          "encroissant"
+          "schaak"
         ]
       }
     },
@@ -64,19 +63,14 @@
           "takesValue": true
         }
       ]
-    },
-    "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDdGOTBFNjg2MzFGM0RDODUKUldTRjNQTXhodWFRZjc2MTNVeXRONGJkRjdGUXlCeW1MSlZESUczT0U4eE5hKzBmY3M2S0U2L0oK",
-      "endpoints": [
-        "https://www.encroissant.org/updates"
-      ]
     }
   },
   "app": {
     "withGlobalTauri": false,
     "windows": [
       {
-        "title": "En Croissant",
+        "title": "Schaak",
+        "backgroundColor": "#1A1B1E",
         "visible": false,
         "decorations": true
       }

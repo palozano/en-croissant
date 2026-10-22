@@ -7,6 +7,7 @@ import {
   Group,
   Progress,
   Skeleton,
+  Switch,
   Stack,
   Table,
   Text,
@@ -39,6 +40,7 @@ import {
   engineProgressFamily,
   enginesAtom,
   tabEngineSettingsFamily,
+  showArrowsAtom,
 } from "@/state/atoms";
 import { chessopsError, positionFromFen, swapMove } from "@/utils/chessops";
 import type { Engine } from "@/utils/engines";
@@ -157,10 +159,12 @@ function BestMovesComponent({
     ),
   );
 
+  const [showArrows, setShowArrows] = useAtom(showArrowsAtom);
+
   return (
     <>
       <Box style={{ display: "flex" }}>
-        <Stack gap={0} py="1rem">
+        <Group gap={6} py="1rem" wrap="nowrap">
           <ActionIcon
             size="md"
             variant={settings.enabled ? "filled" : "transparent"}
@@ -172,7 +176,15 @@ function BestMovesComponent({
           >
             {settings.enabled ? <IconPlayerPause size="1rem" /> : <IconPlayerPlay size="1rem" />}
           </ActionIcon>
-        </Stack>
+          {settings.enabled && (
+            <Switch
+              size="xs"
+              label="Best move"
+              checked={showArrows}
+              onChange={(event) => setShowArrows(event.currentTarget.checked)}
+            />
+          )}
+        </Group>
         <Accordion.Control>
           <EngineTop
             name={engine.name}

@@ -29,6 +29,7 @@ export async function getDatabasesDir(): Promise<string> {
     return ensureDirectory(await resolve(await appDataDir(), "db"));
 }
 
+// Keep the existing document folder to preserve access to saved files.
 export async function getDocumentDir(): Promise<string> {
     const customDir = getStoredDirectory("document-dir");
     if (customDir) {

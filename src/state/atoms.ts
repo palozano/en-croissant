@@ -32,6 +32,7 @@ import { genID, type Tab, tabSchema } from "@/utils/tabs";
 import { getEnginesDir } from "../utils/directories";
 import type { Session } from "../utils/session";
 import { createAsyncZodStorage, createZodStorage } from "./utils";
+import { createEngineSettingsAtom } from "./engineActivation";
 
 const zodArray = <Input, Output>(itemSchema: z.ZodType<Output, z.ZodTypeDef, Input>) => {
     const catchValue = {} as never;
@@ -150,17 +151,54 @@ const enginesFileStorage: AsyncStringStorage = {
     },
 };
 
-export const enginesAtom = unwrap(
-    atomWithStorage<Engine[]>(
-        "engines/engines.json",
-        [],
-        createAsyncZodStorage(zodArray(engineSchema), enginesFileStorage) as AsyncStorage<Engine[]>,
-    ),
+const storedEnginesAtom = atomWithStorage<Engine[]>(
+    "engines/engines.json",
+    [],
+    createAsyncZodStorage(zodArray(engineSchema), enginesFileStorage) as AsyncStorage<Engine[]>,
 );
+export const enginesAtom = unwrap(storedEnginesAtom);
+
+// Serialize registration and rollback per store. Downloads still run in parallel,
+// but a later registration cannot persist a failed attempt's optimistic entry.
+const engineRegistrationQueueAtom = atom(Promise.resolve());
+export const registerInstalledEngineAtom = atom(null, (get, set, engine: Engine) => {
+    const operation = get(engineRegistrationQueueAtom).then(async () => {
+        await get(storedEnginesAtom);
+        const update = (transform: (engines: Engine[]) => Engine[]) =>
+            set(storedEnginesAtom, (previous) =>
+                Array.isArray(previous) ? transform(previous) : previous.then(transform),
+            );
+        try {
+            await update((engines) => [...engines, engine]);
+        } catch (error) {
+            try {
+                await update((engines) => engines.filter((entry) => entry.id !== engine.id));
+            } catch (rollbackError) {
+                // Jotai applies the filtered value before awaiting persistence,
+                // so the failed entry is removed from memory even if this fails.
+                throw new AggregateError(
+                    [error, rollbackError],
+                    `Engine registration failed: ${String(error)}. Cleanup could not be saved: ${String(rollbackError)}`,
+                );
+            }
+            throw error;
+        }
+    });
+    // Keep the queue usable after errors while returning the original operation
+    // to the installer so its button waits and its error handler sees failures.
+    set(
+        engineRegistrationQueueAtom,
+        operation.then(
+            () => undefined,
+            () => undefined,
+        ),
+    );
+    return operation;
+});
 
 // Settings
 
-export const tableViewAtom = atomWithStorage<boolean>("table-view", false);
+export const tableViewAtom = atomWithStorage<boolean>("notation-table-view", true);
 
 export const fontSizeAtom = atomWithStorage(
     "font-size",
@@ -461,6 +499,23 @@ export const currentPlayersAtom = tabValue(playersFamily);
 const gameIdFamily = atomFamily((_tab: string) => atom<string | null>(null));
 export const currentGameIdAtom = tabValue(gameIdFamily);
 
+export const restoreGameSessionAtom = atom(
+    null,
+    (
+        _get,
+        set,
+        session: {
+            tabId: string;
+            gameId: string;
+            players: { white: OpponentSettings; black: OpponentSettings };
+        },
+    ) => {
+        set(playersFamily(session.tabId), session.players);
+        set(gameIdFamily(session.tabId), session.gameId);
+        set(gameStateFamily(session.tabId), "playing");
+    },
+);
+
 // Practice
 
 const reviewLogSchema = z
@@ -646,17 +701,21 @@ export const tabEngineSettingsFamily = atomFamily(
         defaultSettings?: EngineSettings;
         defaultGo?: GoMode;
     }) => {
-        return atom<{
+        return createEngineSettingsAtom<{
             enabled: boolean;
             settings: EngineSettings;
             go: GoMode;
             synced: boolean;
-        }>({
-            enabled: false,
-            settings: defaultSettings || [],
-            go: defaultGo || { t: "Infinite" },
-            synced: true,
-        });
+        }>(
+            {
+                enabled: false,
+                settings: defaultSettings || [],
+                go: defaultGo || { t: "Infinite" },
+                synced: true,
+            },
+            _tab,
+            _engineId,
+        );
     },
     (a, b) => a.tab === b.tab && a.engineId === b.engineId,
 );

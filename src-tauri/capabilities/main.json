@@ -49,8 +49,11 @@
                 "https://lichess.org/**",
                 "https://explorer.lichess.org/**",
                 "https://tablebase.lichess.org/**",
-                "https://www.chessdb.cn/**"
+                "https://www.chessdb.cn/**",
+                "https://raw.githubusercontent.com/lichess-org/chess-openings/a6189a30dc273ccb21fc2536a9a2fefd5592a67a/**"
             ]
-        }
+        },
+        "core:webview:allow-create-webview-window",
+        "core:window:allow-set-focus"
     ]
 }

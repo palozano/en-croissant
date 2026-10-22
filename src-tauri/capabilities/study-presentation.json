@@ -1,0 +1,11 @@
+{
+  "identifier": "study-presentation",
+  "description": "Presentation windows can toggle their own fullscreen state.",
+  "windows": [
+    "study-presentation-*"
+  ],
+  "permissions": [
+    "core:window:allow-set-fullscreen",
+    "core:window:allow-is-fullscreen"
+  ]
+}

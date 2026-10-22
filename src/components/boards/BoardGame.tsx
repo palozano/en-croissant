@@ -1,3 +1,6 @@
+import { notifications } from "@mantine/notifications";
+import { listen } from "@tauri-apps/api/event";
+import { getPGN } from "@/utils/chess";
 import {
   ActionIcon,
   Box,
@@ -65,6 +68,7 @@ import GameNotation from "../common/GameNotation";
 import MoveControls from "../common/MoveControls";
 import { TreeStateContext } from "../common/TreeStateContext";
 import Board from "./Board";
+import GameEndAnimation from "./GameEndAnimation";
 import BoardControls from "./BoardControls";
 import EditingCard from "./EditingCard";
 import { OpponentForm, type OpponentSettings } from "./OpponentForm";
@@ -90,6 +94,7 @@ function BoardGame() {
 
   const [editingMode, toggleEditingMode] = useToggle();
   const [selectedPiece, setSelectedPiece] = useState<Piece | null>(null);
+  const [eraseMode, setEraseMode] = useState(false);
 
   const [inputColor, setInputColor] = useAtom(gameInputColorAtom);
   function cycleColor() {
@@ -138,6 +143,19 @@ function BoardGame() {
   const [whiteTime, setWhiteTime] = useState<number | null>(null);
   const [blackTime, setBlackTime] = useState<number | null>(null);
   const [gameId, setGameId] = useAtom(currentGameIdAtom);
+  useEffect(() => {
+    const unlisten = listen<string>("game-save-error", ({ payload }) =>
+      notifications.show({
+        color: "red",
+        title: "Could not save game",
+        message: payload,
+        autoClose: false,
+      }),
+    );
+    return () => {
+      void unlisten.then((stop) => stop());
+    };
+  }, []);
 
   const [logsOpened, toggleLogsOpened] = useToggle();
   const [logsColor, setLogsColor] = useState<"white" | "black">("white");
@@ -311,6 +329,24 @@ function BoardGame() {
         : null,
       initialFen: root.fen === INITIAL_FEN ? null : root.fen,
       initialMoves,
+      sourcePgn: getPGN(root, {
+        headers: {
+          ...headers,
+          white_elo:
+            playerSettings.white.type === "engine"
+              ? playerSettings.white.engine?.elo
+              : headers.white_elo,
+          black_elo:
+            playerSettings.black.type === "engine"
+              ? playerSettings.black.engine?.elo
+              : headers.black_elo,
+          orientation: boardOrientation,
+        },
+        glyphs: true,
+        comments: true,
+        variations: true,
+        extraMarkups: true,
+      }),
       openingBook:
         openingBookEnabled && openingBookPath
           ? { path: openingBookPath, maxPly: Math.max(1, openingBookMaxPly) }
@@ -367,7 +403,7 @@ function BoardGame() {
         white: state.whitePlayer,
         black: state.blackPlayer,
         event: eventStr,
-        site: "En Croissant",
+        site: "Schaak",
         date: dateStr,
         time: timeStr,
         time_control: undefined,
@@ -414,6 +450,7 @@ function BoardGame() {
       if (!gameId || gameState !== "playing") return;
       try {
         const result = await commands.makeGameMove(gameId, uci);
+        unwrap(result);
         if (!isPlayerVsEngine && autoFlipBoard) {
           toggleOrientation();
         }
@@ -461,6 +498,7 @@ function BoardGame() {
   const onTakeBack = useCallback(async () => {
     if (!gameId || gameState !== "playing") return;
     const result = await commands.takeBackGameMove(gameId);
+    unwrap(result);
   }, [gameId, gameState]);
 
   useEffect(() => {
@@ -561,7 +599,7 @@ function BoardGame() {
 
   async function handleAbort() {
     if (!gameId) return;
-    await commands.abortGame(gameId);
+    unwrap(await commands.abortGame(gameId));
     setGameState("gameOver");
     setResult("*");
   }
@@ -569,7 +607,7 @@ function BoardGame() {
   async function handleResign() {
     if (!gameId) return;
     const losingColor = getResignationLosingColor();
-    await commands.resignGame(gameId, losingColor);
+    unwrap(await commands.resignGame(gameId, losingColor));
   }
 
   async function handleNewGame() {
@@ -598,6 +636,12 @@ function BoardGame() {
 
   return (
     <>
+      <GameEndAnimation
+        boardRef={boardRef}
+        gameState={gameState}
+        outcome={headers.result}
+        humanColor={isPlayerVsEngine ? (players.white.type === "human" ? "white" : "black") : null}
+      />
       <Portal target="#left" style={{ height: "100%" }}>
         <Board
           editingMode={gameState === "settingUp" && editingMode}
@@ -608,6 +652,7 @@ function BoardGame() {
           whiteTime={gameState === "playing" ? (whiteTime ?? undefined) : undefined}
           blackTime={gameState === "playing" ? (blackTime ?? undefined) : undefined}
           onMove={handleHumanMove}
+          eraseMode={eraseMode}
           selectedPiece={selectedPiece}
           cgRef={cgRef}
           enablePremoves={isPlayerVsEngine && gameState === "playing"}
@@ -738,6 +783,9 @@ function BoardGame() {
                   </ScrollArea>
 
                   <Divider pb="sm" />
+                  <Text size="xs" c="dimmed">
+                    Games are saved automatically after every move.
+                  </Text>
                   <Button onClick={startGame} fullWidth variant="light" disabled={error !== null}>
                     {t("Board.Opponent.StartGame")}
                   </Button>
@@ -746,7 +794,17 @@ function BoardGame() {
               {(gameState === "playing" || gameState === "gameOver") && (
                 <Stack h="100%">
                   <Box flex={1}>
-                    <GameInfo headers={headers} />
+                    <GameInfo
+                      resultReadOnly
+                      headers={headers}
+                      humanColor={
+                        isPlayerVsEngine
+                          ? players.white.type === "human"
+                            ? "white"
+                            : "black"
+                          : null
+                      }
+                    />
                   </Box>
                   <Group grow>
                     {gameState === "playing" && (
@@ -795,10 +853,15 @@ function BoardGame() {
             setEditingMode={toggleEditingMode}
             selectedPiece={selectedPiece}
             setSelectedPiece={setSelectedPiece}
+            eraseMode={eraseMode}
+            setEraseMode={setEraseMode}
           />
         ) : (
           <Stack h="100%" gap="xs">
             <GameNotation
+              humanColor={
+                isPlayerVsEngine ? (players.white.type === "human" ? "white" : "black") : null
+              }
               topBar
               controls={
                 <BoardControls

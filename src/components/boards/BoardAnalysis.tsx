@@ -11,7 +11,7 @@ import { useLoaderData } from "@tanstack/react-router";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import type { Piece } from "chessops";
 import { useAtom, useAtomValue } from "jotai";
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useStore } from "zustand";
 import {
@@ -31,7 +31,7 @@ import { getTabFile, saveToFile } from "@/utils/tabs";
 import DetachedEval from "../common/DetachedEval";
 import GameNotation from "../common/GameNotation";
 import MoveControls from "../common/MoveControls";
-import { TreeStateContext } from "../common/TreeStateContext";
+import { useTreeStore } from "../common/TreeStateContext";
 import AnalysisPanel from "../panels/analysis/AnalysisPanel";
 import AnnotationPanel from "../panels/annotation/AnnotationPanel";
 import DatabasePanel from "../panels/database/DatabasePanel";
@@ -47,6 +47,7 @@ function BoardAnalysis() {
 
   const [editingMode, toggleEditingMode] = useToggle();
   const [selectedPiece, setSelectedPiece] = useState<Piece | null>(null);
+  const [eraseMode, setEraseMode] = useState(false);
   const [currentTab, setCurrentTab] = useAtom(currentTabAtom);
   const tabFile = getTabFile(currentTab);
   const hasPersistentOrigin = currentTab?.gameOrigin.kind !== "none";
@@ -54,7 +55,7 @@ function BoardAnalysis() {
   const { documentDir } = useLoaderData({ from: "/" });
   const boardRef = useRef(null);
 
-  const store = useContext(TreeStateContext)!;
+  const store = useTreeStore();
 
   const dirty = useStore(store, (s) => s.dirty);
 
@@ -177,6 +178,7 @@ function BoardAnalysis() {
           practicing={practicing}
           editingMode={editingMode}
           boardRef={boardRef}
+          eraseMode={eraseMode}
           selectedPiece={selectedPiece}
         />
       </Portal>
@@ -256,6 +258,8 @@ function BoardAnalysis() {
             setEditingMode={toggleEditingMode}
             selectedPiece={selectedPiece}
             setSelectedPiece={setSelectedPiece}
+            eraseMode={eraseMode}
+            setEraseMode={setEraseMode}
           />
         ) : (
           <Stack h="100%" gap="xs">

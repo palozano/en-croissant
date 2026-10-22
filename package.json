@@ -1,5 +1,5 @@
 {
-  "name": "en-croissant",
+  "name": "schaak",
   "version": "0.15.1",
   "private": true,
   "type": "module",
@@ -17,7 +17,11 @@
     "i18n:extract": "i18next-cli extract",
     "i18n:status": "i18next-cli status",
     "i18n:types": "i18next-cli types",
-    "i18n:sync": "i18next-cli sync"
+    "i18n:sync": "i18next-cli sync",
+    "dev:web": "node scripts/prepare-web.mjs && vite --mode web",
+    "build:web": "node scripts/prepare-web.mjs && tsc --noEmit && vite build --mode web && node scripts/finish-web.mjs",
+    "preview:web": "vite preview --mode web --host 127.0.0.1 --port 4173",
+    "test:web": "playwright test --config playwright.web.config.ts"
   },
   "dependencies": {
     "@badrap/result": "^0.2.13",
@@ -80,6 +84,7 @@
     "recharts": "^3.7.0",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.0",
+    "stockfish": "19.0.1",
     "swr": "^2.4.0",
     "ts-fsrs": "^3.5.1",
     "ts-pattern": "^5.0.8",
@@ -89,6 +94,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.29.0",
+    "@playwright/test": "^1.64.0",
     "@rolldown/plugin-babel": "^0.2.1",
     "@tanstack/router-plugin": "^1.161.1",
     "@tauri-apps/cli": "2.10.0",
@@ -98,6 +104,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "babel-plugin-react-compiler": "^1.0.0",
+    "fake-indexeddb": "^6.2.5",
     "i18next-cli": "^1.42.12",
     "jsdom": "^28.1.0",
     "oxfmt": "^0.72.0",

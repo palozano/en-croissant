@@ -27,3 +27,9 @@ tsconfig.tsbuildinfo
 *.sw?
 
 src-tauri/gen/
+
+# Generated browser distribution and upstream WASM engine
+dist-web/
+public/stockfish/
+playwright-report/
+test-results/

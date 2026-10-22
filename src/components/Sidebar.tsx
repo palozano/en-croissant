@@ -6,6 +6,8 @@ import {
   IconCpu,
   IconDatabase,
   IconFiles,
+  IconBook,
+  IconHistory,
   IconSettings,
   IconUser,
 } from "@tabler/icons-react";
@@ -39,6 +41,8 @@ function NavbarLink({ url, icon: Icon, label }: NavbarLinkProps) {
 
 const linksdata = [
   { icon: IconChess, label: "Board", url: "/" },
+  { icon: IconBook, label: "Studies", url: "/studies" },
+  { icon: IconHistory, label: "Game history", url: "/games" },
   { icon: IconUser, label: "User", url: "/accounts" },
   { icon: IconFiles, label: "Files", url: "/files" },
   {
@@ -53,7 +57,11 @@ export function SideBar() {
   const { t } = useTranslation();
 
   const links = linksdata.map((link) => (
-    <NavbarLink {...link} label={t(`SideBar.${link.label}`)} key={link.label} />
+    <NavbarLink
+      {...link}
+      label={t(`SideBar.${link.label}`, { defaultValue: link.label })}
+      key={link.label}
+    />
   ));
 
   return (

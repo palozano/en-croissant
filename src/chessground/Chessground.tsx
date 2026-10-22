@@ -1,10 +1,12 @@
-import { Chessground as NativeChessground } from "@lichess-org/chessground";
+import { useBoardMirror } from "./useBoardMirror";
+import { BoardSurface } from "@/features/board/BoardSurface";
+import type { Key } from "@lichess-org/chessground/types";
 import type { Api } from "@lichess-org/chessground/api";
 import type { Config } from "@lichess-org/chessground/config";
-import { Box } from "@mantine/core";
 import { useAtomValue } from "jotai";
-import { type Ref, useEffect, useImperativeHandle, useRef, useState } from "react";
-import { boardImageAtom, is3dAtom, moveMethodAtom } from "@/state/atoms";
+import { type Ref, useImperativeHandle, useRef } from "react";
+import type { NormalMove } from "chessops";
+import { autoPromoteAtom, boardImageAtom, is3dAtom, moveMethodAtom } from "@/state/atoms";
 
 const BOARD_COORDINATE_COLORS: Record<string, { white: string; black: string }> = {
   blue: { white: "#dee3e6", black: "#788a94" },
@@ -55,12 +57,23 @@ export interface ChessgroundRef {
 }
 
 interface ChessgroundProps extends Config {
-  setBoardFen?: (fen: string) => void;
+  onSquareClick?: (key: Key) => void;
+  mirror?: boolean;
+  mirrorViewOnly?: boolean;
+  onMirrorMove?: (move: NormalMove) => void;
+  setBoardFen?: (fen: string) => void | boolean;
   ref?: Ref<ChessgroundRef>;
 }
 
-export function Chessground({ ref, ...props }: ChessgroundProps) {
-  const [api, setApi] = useState<Api | null>(null);
+export function Chessground({
+  ref,
+  mirror = false,
+  mirrorViewOnly,
+  onMirrorMove,
+  onSquareClick,
+  ...props
+}: ChessgroundProps) {
+  const api = useRef<Api | null>(null);
 
   const boardRef = useRef<HTMLDivElement>(null);
 
@@ -70,76 +83,35 @@ export function Chessground({ ref, ...props }: ChessgroundProps) {
   useImperativeHandle(
     ref,
     () => ({
-      playPremove: () => api?.playPremove() ?? false,
-      cancelPremove: () => api?.cancelPremove(),
+      playPremove: () => api.current?.playPremove() ?? false,
+      cancelPremove: () => api.current?.cancelPremove(),
     }),
     [api],
   );
 
-  useEffect(() => {
-    if (boardRef?.current == null) return;
-    if (api) {
-      api.set({
-        ...props,
-        events: {
-          ...props.events,
-          change: () => {
-            if (props.setBoardFen && api) {
-              props.setBoardFen(api.getFen());
-            }
-          },
-        },
-      });
-    } else {
-      const chessgroundApi = NativeChessground(boardRef.current, {
-        ...props,
-        addDimensionsCssVarsTo: boardRef.current,
-        events: {
-          ...props.events,
-          change: () => {
-            if (props.setBoardFen && chessgroundApi) {
-              props.setBoardFen(chessgroundApi.getFen());
-            }
-          },
-        },
-        draggable: {
-          ...props.draggable,
-          enabled: moveMethod !== "select",
-        },
-        selectable: {
-          ...props.selectable,
-          enabled: moveMethod !== "drag",
-        },
-        addPieceZIndex: is3d,
-      });
-      setApi(chessgroundApi);
-    }
-  }, [api, props, boardRef]);
-
-  useEffect(() => {
-    api?.set({
-      ...props,
-      events: {
-        ...props.events,
-        change: () => {
-          if (props.setBoardFen && api) {
-            props.setBoardFen(api.getFen());
-          }
-        },
-      },
-      draggable: {
-        ...props.draggable,
-        enabled: moveMethod !== "select",
-      },
-      selectable: {
-        ...props.selectable,
-        enabled: moveMethod !== "drag",
-      },
-      addPieceZIndex: is3d,
-    });
-  }, [api, props, moveMethod, is3d]);
+  const config = {
+    ...props,
+    draggable: { ...props.draggable, enabled: !!props.movable?.free || moveMethod !== "select" },
+    selectable: { ...props.selectable, enabled: moveMethod !== "drag" },
+    addPieceZIndex: is3d,
+  };
 
   const boardImage = useAtomValue(boardImageAtom);
+  const autoPromote = useAtomValue(autoPromoteAtom);
+  useBoardMirror(
+    mirror,
+    boardRef,
+    {
+      ...props,
+      viewOnly: props.viewOnly || mirrorViewOnly,
+      draggable: { ...props.draggable, enabled: !!props.movable?.free || moveMethod !== "select" },
+      selectable: { ...props.selectable, enabled: moveMethod !== "drag" },
+    },
+    is3d,
+    boardImage,
+    autoPromote,
+    onMirrorMove,
+  );
   const boardCoordColors = getBoardCoordinateColors(boardImage);
   const boardImagePath = is3d ? `/board-3d/${boardImage}` : `/board/${boardImage}`;
 
@@ -150,7 +122,12 @@ export function Chessground({ ref, ...props }: ChessgroundProps) {
     : { width: "100%", aspectRatio: 1 };
 
   return (
-    <Box
+    <BoardSurface
+      config={config}
+      apiRef={api}
+      hostRef={boardRef}
+      onFen={props.setBoardFen}
+      onSquareClick={onSquareClick}
       className={is3d ? "is3d" : undefined}
       style={{
         ...boardStyle,
@@ -158,7 +135,6 @@ export function Chessground({ ref, ...props }: ChessgroundProps) {
         "--board-coord-color-white": boardCoordColors.white,
         "--board-coord-color-black": boardCoordColors.black,
       }}
-      ref={boardRef}
     />
   );
 }

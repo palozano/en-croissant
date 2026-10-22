@@ -38,6 +38,8 @@ import {
 import { getVariationLine } from "@/utils/chess";
 import { getPiecesCount, hasCaptures, isOp1, positionFromFen } from "@/utils/chessops";
 import type { Engine } from "@/utils/engines";
+import { engineActivationOrderFamily } from "@/state/engineActivation";
+import { orderAnalysisEngines, reorderAnalysisEngines } from "@/utils/analysisEngineOrder";
 import { getInitials } from "@/utils/format";
 import BestMoves, { arrowColors } from "./BestMoves";
 import EngineSelection from "./EngineSelection";
@@ -71,9 +73,13 @@ function AnalysisPanel() {
     (_, newEngines) => newEngines,
   );
 
+  const activeTab = useAtomValue(activeTabAtom);
+  const [activationOrder, setActivationOrder] = useAtom(
+    engineActivationOrderFamily(activeTab ?? ""),
+  );
   const loadedEngines = useMemo(
-    () => optimisticEngines.filter((e) => e.loaded),
-    [optimisticEngines],
+    () => orderAnalysisEngines(optimisticEngines, activationOrder),
+    [optimisticEngines, activationOrder],
   );
 
   const [, enable] = useAtom(enableAllAtom);
@@ -141,7 +147,7 @@ function AnalysisPanel() {
                   <Group grow flex={1} gap="xs">
                     {loadedEngines.map((engine, i) => (
                       <EngineSummary
-                        key={engine.name}
+                        key={engine.id}
                         engine={engine}
                         fen={rootFen}
                         moves={moves}
@@ -174,10 +180,16 @@ function AnalysisPanel() {
                   onDragEnd={({ destination, source }) => {
                     if (destination?.index === undefined) return;
                     startTransition(async () => {
-                      const reordered = reorderEngines(
+                      const reordered = reorderAnalysisEngines(
                         optimisticEngines,
+                        loadedEngines,
                         source.index,
                         destination!.index,
+                      );
+                      setActivationOrder(
+                        reordered
+                          .filter((engine) => activationOrder.includes(engine.id))
+                          .map((engine) => engine.id),
                       );
                       setOptimisticEngines(reordered);
                       await setEngines(reordered);
@@ -189,11 +201,7 @@ function AnalysisPanel() {
                       <div ref={provided.innerRef} {...provided.droppableProps}>
                         <Stack w="100%" gap="xs">
                           {loadedEngines.map((engine, i) => (
-                            <Draggable
-                              key={engine.name + i.toString()}
-                              draggableId={engine.name}
-                              index={i}
-                            >
+                            <Draggable key={engine.id} draggableId={engine.id} index={i}>
                               {(provided) => (
                                 <div ref={provided.innerRef} {...provided.draggableProps}>
                                   <Accordion.Item value={engine.name}>
@@ -270,25 +278,6 @@ function AnalysisPanel() {
       </Tabs>
     </Stack>
   );
-}
-
-function reorderEngines(
-  engines: Engine[],
-  sourceIndex: number,
-  destinationIndex: number,
-): Engine[] {
-  const result = Array.from(engines);
-  const loaded = result.filter((e) => e.loaded);
-  const [removed] = loaded.splice(sourceIndex, 1);
-  loaded.splice(destinationIndex, 0, removed);
-
-  result.forEach((e, i) => {
-    if (e.loaded) {
-      result[i] = loaded.shift()!;
-    }
-  });
-
-  return result;
 }
 
 function EngineSummary({

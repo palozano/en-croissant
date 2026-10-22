@@ -9,7 +9,8 @@ import { type GameHeaders, getNodeAtPath, type TreeState } from "@/utils/treeRed
 import GameNotation from "../common/GameNotation";
 import MoveControls from "../common/MoveControls";
 import OpeningName from "../common/OpeningName";
-import { TreeStateContext, TreeStateProvider } from "../common/TreeStateContext";
+import { TreeStateContext } from "../common/TreeStateContext";
+import { TreeStateProvider } from "../common/TreeStateProvider";
 
 function GamePreviewWrapper({
   pgn,

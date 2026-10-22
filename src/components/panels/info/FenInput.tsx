@@ -103,11 +103,11 @@ function FenInputInner({ currentFen, setup }: { currentFen: string; setup: Setup
           <Text fw="bold">FEN</Text>
           <FenSearch currentFen={currentFen} />
           <Group>
-            <Button variant="default" onClick={() => setFen(INITIAL_FEN)}>
-              {t("Fen.Start")}
-            </Button>
-            <Button variant="default" onClick={() => setFen(EMPTY_FEN)}>
-              {t("Fen.Empty")}
+            <Button
+              variant="default"
+              onClick={() => setFen(setup.board.occupied.isEmpty() ? INITIAL_FEN : EMPTY_FEN)}
+            >
+              {setup.board.occupied.isEmpty() ? t("Fen.Start") : t("Fen.Empty")}
             </Button>
             <Select
               flex={1}

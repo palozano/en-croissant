@@ -1,3 +1,4 @@
+import { getPositionMaterialError, isPositionRemoval } from "@/utils/positionEditor";
 import type { DrawBrushes, DrawShape } from "@lichess-org/chessground/draw";
 import { ActionIcon, Box, Center, Group, Text, useMantineTheme } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
@@ -71,6 +72,7 @@ const BAR_HEIGHT = "1.9rem";
 
 interface ChessboardProps {
   editingMode: boolean;
+  eraseMode?: boolean;
   viewOnly?: boolean;
   disableVariations?: boolean;
   movable?: "both" | "white" | "black" | "turn" | "none";
@@ -86,6 +88,7 @@ interface ChessboardProps {
 
 function Board({
   editingMode,
+  eraseMode = false,
   viewOnly,
   disableVariations,
   movable = "turn",
@@ -358,11 +361,16 @@ function Board({
       }
       const newFen = `${fen} ${currentNode.fen.split(" ").slice(1).join(" ")}`;
 
+      const materialError = getPositionMaterialError(newFen);
+      if (materialError && !isPositionRemoval(currentNode.fen, newFen)) {
+        notifications.show({ color: "red", message: t(materialError) });
+        return false;
+      }
       if (newFen !== currentNode.fen) {
         setFen(newFen);
       }
     },
-    [editingMode, currentNode, setFen],
+    [editingMode, currentNode, setFen, t],
   );
 
   useHotkeys(keyMap.TOGGLE_EVAL_BAR.keys, () => setEvalOpen((e) => !e));
@@ -384,6 +392,8 @@ function Board({
     <>
       <Box w="100%" h="100%">
         <Box
+          data-board-frame
+          className={classes.boardFrame}
           style={{
             display: "flex",
             flexDirection: "column",
@@ -507,6 +517,11 @@ function Board({
               />
 
               <Chessground
+                mirror
+                mirrorViewOnly={viewOnly}
+                onMirrorMove={(move) => {
+                  if (!editingMode && !viewOnly) void makeMove(move);
+                }}
                 ref={cgRef}
                 setBoardFen={setBoardFen}
                 orientation={orientation}
@@ -559,17 +574,20 @@ function Board({
                     },
                   },
                 }}
-                events={{
-                  select: (key) => {
-                    if (editingMode && selectedPiece) {
-                      const square = parseSquare(key);
-                      if (square) {
-                        const setup = parseFen(currentNode.fen).unwrap();
-                        setup.board.set(square, selectedPiece);
-                        setFen(makeFen(setup));
-                      }
+                onSquareClick={(key) => {
+                  if (editingMode && (selectedPiece || eraseMode)) {
+                    const square = parseSquare(key);
+                    if (square !== undefined) {
+                      const setup = parseFen(currentNode.fen).unwrap();
+                      if (eraseMode) setup.board.take(square);
+                      else if (selectedPiece) setup.board.set(square, selectedPiece);
+                      const fen = makeFen(setup);
+                      const materialError = getPositionMaterialError(fen);
+                      if (materialError && !eraseMode)
+                        notifications.show({ color: "red", message: t(materialError) });
+                      else setFen(fen);
                     }
-                  },
+                  }
                 }}
                 turnColor={turn}
                 check={moveHighlight && pos?.isCheck()}

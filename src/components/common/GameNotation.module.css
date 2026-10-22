@@ -1,17 +1,38 @@
+.notation {
+  --notation-move-size: 0.8rem;
+  --notation-guide: var(--mantine-color-default-border);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
 .variationBorder {
-  border-left: 2px solid #404040;
-  padding-left: 5px;
-  margin-left: 12px;
+  border-left: 1px solid var(--notation-guide);
+  padding: 3px 0 3px 10px;
+  margin: 6px 0 6px 10px;
+}
+
+.lineBeforeVariation {
+  position: relative;
+  padding: 3px 0;
+}
+
+.lineBeforeVariation + .lineBeforeVariation {
+  border-top: 1px solid var(--notation-guide);
+  margin-top: 4px;
+  padding-top: 6px;
 }
 
 .lineBeforeVariation::before {
-  display: inline-block;
-  content: " ";
-  border-top: 2px solid #404040;
-  width: 8px;
-  height: 5px;
-  margin-left: -5px;
-  margin-top: 16px;
+  position: absolute;
+  content: "";
+  border-top: 1px solid var(--notation-guide);
+  width: 9px;
+  left: -10px;
+  top: 18px;
+}
+
+.moveTable td + td {
+  border-left: 1px solid var(--notation-guide);
 }
 
 .moveTableMoveNumber {

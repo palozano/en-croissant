@@ -1,0 +1,11 @@
+.git
+node_modules
+dist
+dist-web
+src-tauri/target
+test-results
+playwright-report
+public/stockfish
+.aws
+.env
+.env.*

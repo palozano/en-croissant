@@ -1,0 +1,56 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.boardOverlay {
+  position: absolute;
+}
+
+.confetti {
+  position: absolute;
+  top: -20px;
+  width: 10px;
+  height: 16px;
+  border-radius: 2px;
+  animation: fall 3s var(--delay) ease-in forwards;
+}
+
+.skull {
+  font-size: clamp(80px, 16vmin, 180px);
+  line-height: 1.2;
+  animation: skull 3s linear both;
+  filter: drop-shadow(0 8px 24px rgb(0 0 0 / 25%));
+}
+
+@keyframes fall {
+  to {
+    transform: translate(var(--drift), calc(100vh + 40px)) rotate(var(--rotation));
+    opacity: 0;
+  }
+}
+
+@keyframes skull {
+  from {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: rotate(1080deg) scale(0.3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confetti {
+    display: none;
+  }
+  .skull {
+    animation: none;
+  }
+}
