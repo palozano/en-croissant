@@ -37,6 +37,34 @@ export default defineConfig(({ mode }) => ({
     },
     build: {
         outDir: mode === "web" ? "dist-web" : "dist",
+        rolldownOptions: {
+            output: {
+                // Preserve initialization order when shared dependencies move between chunks.
+                strictExecutionOrder: true,
+                codeSplitting: {
+                    groups: [
+                        {
+                            name: "translations",
+                            test: /[/\\]src[/\\]translation[/\\]/,
+                            maxSize: 350_000,
+                            priority: 20,
+                        },
+                        {
+                            name: "vendor",
+                            test: /[/\\]node_modules[/\\]/,
+                            maxSize: 350_000,
+                            priority: 10,
+                        },
+                        {
+                            name: "app",
+                            test: /[/\\]src[/\\]/,
+                            maxSize: 350_000,
+                            priority: 5,
+                        },
+                    ],
+                },
+            },
+        },
         minify: isDebug ? false : "esbuild",
         sourcemap: isDebug ? "inline" : false,
         target: process.env.TAURI_ENV_PLATFORM == "windows" ? "chrome105" : "safari13",
