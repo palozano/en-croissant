@@ -1,9 +1,9 @@
-import { invoke } from "@tauri-apps/api/core";
 import { notifications } from "@mantine/notifications";
 import { useTranslation } from "react-i18next";
 import { ActionIcon, Box, Button, Group, Progress } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
 import { memo, useCallback, useEffect, useState } from "react";
+import { commands } from "@/bindings";
 import { formatBytes } from "@/utils/format";
 import { useProgress } from "@/hooks/useProgress";
 import classes from "./ProgressButton.module.css";
@@ -58,7 +58,7 @@ function ProgressButton({
     if (isDownload && !onCancel) {
       setCancelling(true);
       try {
-        await invoke("cancel_download", { id });
+        await commands.cancelDownload(id);
       } catch (error) {
         notifications.show({ color: "red", message: String(error) });
       } finally {
@@ -92,6 +92,7 @@ function ProgressButton({
       <Button
         fullWidth
         onClick={async () => {
+          if (!isDownload) return onClick(id);
           try {
             await onClick(id);
           } catch (error) {
@@ -99,10 +100,8 @@ function ProgressButton({
               notifications.show({ color: "red", message: String(error) });
             }
           } finally {
-            if (isDownload) {
-              clear();
-              setInProgress(false);
-            }
+            clear();
+            setInProgress(false);
           }
         }}
         disabled={showProgress || (completed && !redoable) || disabled}

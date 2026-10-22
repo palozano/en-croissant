@@ -904,4 +904,37 @@ mod tests {
         assert!(!destination.exists());
         task.await.unwrap();
     }
+    #[tokio::test]
+    async fn cancellation_while_waiting_for_headers_preserves_an_existing_partial() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}/db.db3", listener.local_addr().unwrap());
+        let (ready, received) = tokio::sync::oneshot::channel();
+        let server = tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut request = [0; 4096];
+            socket.read(&mut request).await.unwrap();
+            ready.send(()).unwrap();
+            std::future::pending::<()>().await;
+        });
+        let directory = tempfile::tempdir().unwrap();
+        let destination = directory.path().join("db.db3");
+        seed(&url, &destination, b"ABCD", etag(), Some(8));
+        let (handle, registration) = futures_util::future::AbortHandle::new_pair();
+        let mut transfer = Box::pin(futures_util::future::Abortable::new(
+            receive("test", &url, &destination, None, None, |_, _, _| Ok(())),
+            registration,
+        ));
+        tokio::select! {
+            result = &mut transfer => panic!("transfer ended before cancellation: {}", result.is_err()),
+            result = received => result.unwrap(),
+        }
+        handle.abort();
+        assert!(transfer.await.is_err());
+        server.abort();
+        assert_eq!(
+            std::fs::read(part_paths(&url, &destination).0).unwrap(),
+            b"ABCD"
+        );
+        assert!(!destination.exists());
+    }
 }
