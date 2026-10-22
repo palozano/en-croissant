@@ -1,4 +1,4 @@
-import { tokenizePgn } from "@/features/studies/pgn";
+import { tokenizePgn } from "@/utils/pgn";
 import type { DrawShape } from "@lichess-org/chessground/draw";
 import { type Color, type Move, makeSquare, makeUci, parseUci, type Role } from "chessops";
 import { type Chess, normalizeMove } from "chessops/chess";

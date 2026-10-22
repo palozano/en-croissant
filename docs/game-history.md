@@ -1,7 +1,7 @@
 # Automatic game saving and recovery
 
 Desktop games are saved automatically in the app data folder, under
-`game-history-v1/`. Open **Game history** in the sidebar or from the Play screen.
+`game-history-v1/`. Open **Game history** in the sidebar. The New Tab screen shows the five most recently saved games, with Analyze and Resume actions and a link to the full history.
 The history persists across application restarts and is independent of tab
 session storage. Existing games from before this feature cannot be reconstructed
 if their session data has already been lost.

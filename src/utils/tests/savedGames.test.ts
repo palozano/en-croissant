@@ -6,12 +6,13 @@ import {
     savedGameResult,
     type SavedGame,
 } from "@/utils/savedGames";
-import { createStudy, addStudyMove, nodeAt } from "@/features/studies/model";
+import { Chess } from "chessops/chess";
+import { INITIAL_FEN, makeFen } from "chessops/fen";
 import { parseUci } from "chessops";
 function record(): SavedGame {
-    const start = createStudy();
-    const { study, path } = addStudyMove(start, [], parseUci("e2e4")!);
-    const node = nodeAt(study, path);
+    const position = Chess.default();
+    position.play(parseUci("e2e4")!);
+    const fen = makeFen(position.toSetup());
     return {
         version: 1,
         id: "saved",
@@ -36,8 +37,8 @@ function record(): SavedGame {
         state: {
             gameId: "old-game",
             status: "playing",
-            initialFen: start.root.fen,
-            currentFen: node.fen,
+            initialFen: INITIAL_FEN,
+            currentFen: fen,
             ply: 1,
             turn: "black",
             whiteTime: BigInt(178000),
@@ -48,7 +49,7 @@ function record(): SavedGame {
                 {
                     uci: "e2e4",
                     san: "e4",
-                    fenAfter: node.fen,
+                    fenAfter: fen,
                     clock: BigInt(178000),
                     whiteTime: BigInt(178000),
                     blackTime: null,
@@ -113,4 +114,10 @@ test("unsupported source annotations cannot block recovering the actual game", a
     const tree = await parsePGN(savedGamePgn(game));
     expect(tree.root.children[0].san).toBe("e4");
     expect(game.config.sourcePgn).toContain("Atomic");
+});
+
+test("the shared PGN parser still accepts a blank new analysis board", async () => {
+    const tree = await parsePGN("");
+    expect(tree.root.children).toHaveLength(0);
+    expect(tree.root.fen).toBe(INITIAL_FEN);
 });
