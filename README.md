@@ -1,7 +1,6 @@
 <div align="center">
   <img width="115" height="115" src="./public/knight.svg" alt="Schaak knight">
   <h3>Schaak</h3>
-  <p>The Ultimate Chess Toolkit</p>
 </div>
 
 Schaak is an open-source, cross-platform chess GUI that aims to be powerful, customizable and easy to use.
@@ -14,7 +13,7 @@ Schaak is an open-source, cross-platform chess GUI that aims to be powerful, cus
 - Simple engine and database installation and management
 - Absolute or partial position search in the database
 
-<img src="https://github.com/franciscoBSalgueiro/encroisssant-site/blob/master/public/showcase.webp" />
+<img src="https://github.com/palozano/schaak/blob/master/public/showcase.webp" />
 
 ## Building from source
 
